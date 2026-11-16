@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torre ASCII (só a peça)</title>
+<style>
+  :root { --bg:#0b0d10; --fg:#cfd6dd; --dim:#7b8794; --line:#222a33; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 ui-monospace,Consolas,monospace; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  header h1 { font-size:14px; margin:0 8px 0 0; font-weight:600; }
+  button, select { background:#151a20; color:var(--fg); border:1px solid var(--line); padding:5px 10px; font:inherit; cursor:pointer; border-radius:4px; }
+  button:hover, select:hover { border-color:#3a4654; }
+  label { color:var(--dim); display:flex; align-items:center; gap:6px; }
+  input[type=range] { width:110px; }
+  #stage { flex:1; min-height:0; overflow:hidden; display:flex; justify-content:center; align-items:center; }
+  #stage table { cursor:grab; user-select:none; }
+  footer { padding:8px 16px; border-top:1px solid var(--line); color:var(--dim); font-size:12px; }
+  kbd { border:1px solid var(--line); padding:0 4px; border-radius:3px; color:var(--fg); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Torre ASCII (só a peça)</h1>
+  <button id="reset">Resetar</button>
+  <label>Resolução <input id="res" type="range" min="0.1" max="0.45" step="0.01" value="0.2"></label>
+  <label>Caracteres
+    <select id="chars">
+      <option value=" .:-=+*#%@">clássico</option>
+      <option value=" .oO0@">suave</option>
+      <option value=" █">blocos</option>
+      <option value=" 01">binário</option>
+    </select>
+  </label>
+  <label><input id="color" type="checkbox" checked> Cores</label>
+  <label><input id="auto" type="checkbox"> Girar sozinho</label>
+  </header>
+<div id="stage"></div>
+<footer><kbd>←</kbd> <kbd>→</kbd> giram a torre, <kbd>↑</kbd> <kbd>↓</kbd> inclinam. Arraste com o mouse para girar a câmera, roda do mouse dá zoom.</footer>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { AsciiEffect } from 'three/addons/effects/AsciiEffect.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = id => document.getElementById(id);
+const stage = $('stage');
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+camera.position.set(0, 2.2, 5);
+const renderer = new THREE.WebGLRenderer();
+scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(4, 10, 6);
+scene.add(sun);
+
+let effect, controls;
+function buildEffect() {
+  if (effect) stage.innerHTML = '';
+  effect = new AsciiEffect(renderer, $('chars').value, {
+    invert: true, resolution: +$('res').value, scale: 1, color: $('color').checked,
+  });
+  effect.domElement.style.color = '#cfd6dd';
+  effect.domElement.style.backgroundColor = '#0b0d10';
+  stage.appendChild(effect.domElement);
+  if (controls) controls.dispose();
+  controls = new OrbitControls(camera, effect.domElement);
+  controls.enableDamping = true;
+  controls.enablePan = false;
+  controls.minDistance = 2.5;
+  controls.maxDistance = 12;
+  controls.target.set(0, 0.7, 0);
+  resize();
+}
+function resize() {
+  const s = Math.min(stage.clientWidth, stage.clientHeight);
+  camera.aspect = 1;
+  camera.updateProjectionMatrix();
+  effect.setSize(s, s);
+}
+
+
+// --- torre: corpo de revolução + ameias ---
+const rook = new THREE.Group();
+const mat = new THREE.MeshStandardMaterial({ color: 0xd9a441, roughness: 0.4, metalness: 0.2 });
+const profile = [[0,0],[0.4,0],[0.4,0.1],[0.32,0.18],[0.3,0.3],[0.2,0.4],[0.2,0.85],[0.3,0.95],[0.3,1.05],[0.36,1.05],[0.36,1.25],[0,1.25]]
+  .map(([x, y]) => new THREE.Vector2(x, y));
+rook.add(new THREE.Mesh(new THREE.LatheGeometry(profile, 32), mat));
+for (let k = 0; k < 4; k++) {
+  const a = k * Math.PI / 2 + Math.PI / 4;
+  const merlon = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), mat);
+  merlon.position.set(Math.cos(a) * 0.26, 1.35, Math.sin(a) * 0.26);
+  merlon.rotation.y = -a;
+  rook.add(merlon);
+}
+scene.add(rook);
+
+// --- setas giram/inclinam a torre (suave) ---
+const rot = { y: 0, x: 0 };
+const DIR = { ArrowLeft:['y',-1], ArrowRight:['y',1], ArrowUp:['x',-1], ArrowDown:['x',1] };
+function reset() { rot.y = rot.x = 0; rook.rotation.set(0, 0, 0); }
+addEventListener('keydown', e => {
+  const d = DIR[e.key];
+  if (!d) return;
+  e.preventDefault();
+  rot[d[0]] += d[1] * Math.PI / 8;
+});
+$('reset').onclick = reset;
+$('res').oninput = $('chars').onchange = $('color').onchange = buildEffect;
+addEventListener('resize', resize);
+
+reset();
+buildEffect();
+(function loop() {
+  requestAnimationFrame(loop);
+  rook.rotation.y += (rot.y - rook.rotation.y) * 0.2;
+  rook.rotation.x += (rot.x - rook.rotation.x) * 0.2;
+  controls.autoRotate = $('auto').checked;
+  controls.update();
+  effect.render(scene, camera);
+})();
+</script>
+</body>
+</html>

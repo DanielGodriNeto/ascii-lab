@@ -8,8 +8,9 @@ Experimentos de ASCII em 3D no navegador (three.js + `AsciiEffect`). Basta abrir
 |---|---|---|
 | `rubik-ascii.html` | Cubo de Rubik 3D | Arrastar gira o cubo, roda do mouse dá zoom, teclas `U D L R F B` giram camadas (com `Shift` ao contrário), botões Embaralhar/Resetar |
 | `rook-ascii.html` | Torre de xadrez num tabuleiro 8x8 | Setas `← ↑ → ↓` movem a torre uma casa por toque, arrastar gira a câmera, roda dá zoom |
+| `rook-solo-ascii.html` | Só a torre, sem tabuleiro | Setas `← →` giram a torre, `↑ ↓` inclinam, arrastar gira a câmera, roda dá zoom |
 
-Ambas têm sliders de resolução, troca de conjunto de caracteres, cores on/off e "girar sozinho".
+Todas têm sliders de resolução, troca de conjunto de caracteres, cores on/off e "girar sozinho".
 
 ## Notas
 
